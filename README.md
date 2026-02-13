@@ -1,142 +1,173 @@
-🐛 Problems Faced & Solutions
-This project involved real-world deployment challenges around authentication, authorization, database security, and real-time synchronization. Below are the key issues encountered and how they were resolved.
-🔐 Unauthorized Error After Deployment
+🐛 Production Challenges & Resolutions
 
-Issue: Application showed Unauthorized error after hosting.
+During development and deployment, several real-world issues appeared in authentication, authorization, database access, and real-time communication.
+Solving them helped strengthen the reliability, scalability, and security of the application.
 
-Cause:
+🚪 Logout Not Clearing the Session
+🚨 Problem
 
-Environment variables were not configured in production.
+After clicking logout, the UI still behaved as if the user was logged in.
 
-Production URL was not added in Supabase Authentication settings.
+🔎 Why It Happened
 
-RLS policies were blocking access.
+The Supabase session was removed, but the frontend state and cached data were not refreshed.
 
-Solution:
+🛠 What I Did
 
-Added NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in hosting dashboard.
-
-Added production domain in:
-
-Supabase → Authentication → URL Configuration
-
-
-Verified and corrected Row Level Security (RLS) policies.
-
-🚪 Logout Not Working Properly
-
-Issue: User session was not clearing correctly.
-
-Cause: Session state was not updating after sign out.
-
-Solution:
-
-Used:
+Called:
 
 await supabase.auth.signOut();
 
+Redirected the user to the login page.
 
-Redirected user after logout.
+Forced UI/state refresh after logout.
 
-Ensured UI refresh after session removal.
+✅ Outcome
+
+The session cleared correctly and protected routes became inaccessible.
 
 🗄 SQL Syntax Error (42601)
+🚨 Problem
 
-Issue:
+While configuring the database, the editor returned:
 
 ERROR: 42601: syntax error at or near "Realtime"
 
+🔎 Why It Happened
 
-Cause: Invalid/non-SQL text was executed in Supabase SQL editor.
+Some non-SQL text from the dashboard interface was mistakenly pasted into the SQL editor.
 
-Solution:
+🛠 What I Did
 
-Executed only valid SQL queries.
+Ensured only valid SQL commands were executed.
 
-Avoided copying dashboard text into SQL editor.
+Rechecked statements before running them.
 
-⚡ Realtime Not Working
+✅ Outcome
 
-Issue: Real-time updates were not triggering.
+Database scripts executed without errors.
 
-Cause:
+⚡ Realtime Updates Not Triggering
+🚨 Problem
 
-Table was not added to Realtime publication.
+UI did not update automatically when data changed.
 
-Realtime replication was not enabled.
+🔎 Why It Happened
 
-Solution:
+The table was not included in Supabase’s realtime publication and replication was disabled.
 
-Enabled Realtime in:
+🛠 What I Did
 
-Supabase → Database 
+Enabled realtime replication from
+Supabase → Database.
 
+Added the necessary table (e.g., bookmarks) to the publication.
 
-Added bookmarks table to publication.
+✅ Outcome
 
-🔄 Cross-Tab Sync Issue
+Clients started receiving live updates instantly.
 
-Issue: Bookmark data was not updating in real-time across multiple tabs and browsers.
+🔄 Data Not Syncing Across Tabs & Devices
+🚨 Problem
 
-Initial Approach (Storage Event Listener):
+Updates appeared in one tab but not in other browsers or devices.
 
-Implemented a storage event listener to sync updates.
+🔎 Investigation Journey
 
-This worked only for multiple tabs in the same browser.
+Storage Event Listener
 
-Limitation: It does not sync across different browsers or devices.
+Works only for tabs inside the same browser.
 
-Considered Approach (Polling):
+Not suitable for multi-device scenarios.
 
-Thought about using polling (sending periodic API requests).
+Polling
 
-Limitation:
-
-Unnecessary repeated server requests.
+Required frequent API hits.
 
 Increased server load.
 
-Inefficient when no data changes occur.
+Inefficient if no changes occur.
 
-Final Solution (WebSockets / Supabase Realtime):
+🛠 Final Implementation – WebSockets (Supabase Realtime)
 
-Implemented real-time updates using WebSockets.
+Subscribed to database change events.
 
-Server pushes updates automatically when data changes.
+Server pushed updates automatically.
 
-No need for repeated API calls.
+Cleaned up subscriptions properly using React lifecycle (useEffect).
 
-Works across browsers, devices, and sessions.
+✅ Outcome
 
-More scalable and efficient compared to polling.
+True real-time synchronization across browsers, devices, and user sessions with better performance.
 
-Ensured proper event cleanup using useEffect.
+🔒 RLS Preventing Insert/Select
+🚨 Problem
 
-🔒 RLS Blocking Data Access
+Even logged-in users couldn’t read or write data.
 
-Issue: Logged-in users could not insert/select data.
+🔎 Why It Happened
 
-Cause: RLS enabled but policies were missing.
+RLS was enabled but access policies were not defined.
 
-Solution:
+🛠 What I Did
 
-Created proper policies using:
+Created policies ensuring users can only access their own data:
 
 auth.uid() = user_id
 
 
-Ensured user_id is correctly stored during insert.
+Also verified user_id is correctly saved during inserts.
 
-📚 Key Learnings
+✅ Outcome
 
-Production environment variables must always be configured.
+Secure and correct per-user data isolation.
 
-Supabase Auth requires correct URL configuration in production.
+🔐 Unauthorized Error After Deployment
+🚨 Problem
 
-Row Level Security must be configured carefully.
+After deploying the application to production, authenticated API calls started failing with 401 Unauthorized errors.
+The same flow worked perfectly in the local environment.
 
-Realtime requires manual table publication.
+🔎 Why It Happened
 
-Browser DevTools (Network tab) helps debug 401 errors.
+After investigation using browser network logs and Supabase settings, the problems were:
 
-Proper session handling is essential for authentication flows.
+Production environment variables were not configured.
+
+The deployed domain was not whitelisted in authentication settings.
+
+Row Level Security (RLS) policies prevented access.
+
+🛠 What I Did
+
+I fixed the issue by:
+
+Adding
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+in the hosting provider’s environment configuration.
+
+Registering the production domain in
+Supabase → Authentication → URL Configuration.
+
+Reviewing and correcting RLS rules.
+
+✅ Outcome
+
+APIs started returning valid responses and authenticated users could access their data normally.
+
+📚 What This Experience Taught Me
+
+Production setup is as important as development.
+
+Auth systems fail if domains and keys are misconfigured.
+
+RLS requires careful design.
+
+Realtime systems need explicit enablement.
+
+Network debugging tools are essential.
+
+WebSockets provide a cleaner and scalable alternative to polling.
+
+Proper session invalidation is critical for security.
